@@ -1,0 +1,32 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "ebrook/b2b-saas-starter",
+    "description": "A Laravel SaaS starter package with multi-tenancy support, Filament admin panel, and role-based permissions",
+    "type": "laravel-package",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "eBrook Team",
+            "email": "contact@ebrook.com"
+        }
+    ],
+    "keywords": ["laravel", "saas", "multi-tenancy", "filament", "tenancy"],
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ebrook\\SaasStarter\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ebrook\\SaasStarter\\EbrookSaasServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
