@@ -49,6 +49,7 @@ php artisan ebrook-saas:install --force
 ### 4. Run Migrations and Create Admin
 
 ```bash
+php artisan vendor:publish --provider="Spatie\Activitylog\ActivitylogServiceProvider"
 php artisan migrate
 php artisan shield:generate --all
 php artisan shield:super-admin
