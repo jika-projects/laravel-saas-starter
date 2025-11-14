@@ -6,10 +6,12 @@ use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDomains;
 use Stancl\Tenancy\Database\Contracts\TenantWithDatabase;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Tenant extends BaseTenant implements TenantWithDatabase
 {
-    use HasDatabase, HasDomains;
+    use HasDatabase, HasDomains, LogsActivity;
 
     protected $fillable = [
         'id',
@@ -32,9 +34,9 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public static function getStatusOptions(): array
     {
         return [
-            'active' => '正常',
-            'inactive' => '未激活',
-            'suspended' => '已暂停',
+            'active' => 'Active',
+            'inactive' => 'Inactive',
+            'suspended' => 'Suspended',
         ];
     }
 
@@ -44,5 +46,12 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public function getStatusLabelAttribute(): string
     {
         return self::getStatusOptions()[$this->status] ?? $this->status;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll()
+            ->logOnlyDirty();
     }
 }
