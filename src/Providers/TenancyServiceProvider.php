@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route as RouteFacade;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 use Stancl\Tenancy\Middleware\InitializeTenancyByRequestData;
 use Stancl\Tenancy\Bootstrappers\Integrations\FortifyRouteBootstrapper;
+use Livewire\Livewire;
 
 /**
  * Tenancy for Laravel.
@@ -200,9 +201,9 @@ class TenancyServiceProvider extends ServiceProvider
         // };
 
         // // To make Livewire v3 work with Tenancy, make the update route universal.
-        // Livewire::setUpdateRoute(function ($handle) {
-        //     return RouteFacade::post('/livewire/update', $handle)->middleware(['web', 'universal', \Stancl\Tenancy\Tenancy::defaultMiddleware()]);
-        // });
+        Livewire::setUpdateRoute(function ($handle) {
+            return RouteFacade::post('/livewire/update', $handle)->middleware(['web', 'universal', \Stancl\Tenancy\Tenancy::defaultMiddleware()]);
+        });
     }
 
     protected function bootEvents()
