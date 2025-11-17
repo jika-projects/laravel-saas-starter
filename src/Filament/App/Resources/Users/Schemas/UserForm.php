@@ -28,7 +28,15 @@ class UserForm
                 DateTimePicker::make('email_verified_at'),
                 TextInput::make('password')
                     ->password()
-                    ->required(),
+                    ->required(fn ($context) => $context === 'create')
+                    ->dehydrateStateUsing(fn (string $state): string => bcrypt($state))
+                    ->dehydrated(fn (?string $state): bool => filled($state)),
+                TextInput::make('password_confirmation')
+                    ->password()
+                    ->label('Confirm Password')
+                    ->required(fn ($context, $get) => $context === 'create' || filled($get('password')))
+                    ->same('password')
+                    ->dehydrated(false),
             ]);
     }
 }

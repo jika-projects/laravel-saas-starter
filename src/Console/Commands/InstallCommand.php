@@ -282,6 +282,7 @@ class InstallCommand extends Command
         $providersToAdd = [
             'App\Providers\TenancyServiceProvider::class',
             'App\Providers\Filament\AppPanelProvider::class',
+            'App\Providers\ActivityLogServiceProvider::class',
         ];
 
         foreach ($providersToAdd as $provider) {
@@ -437,6 +438,7 @@ class InstallCommand extends Command
             'filament/filament:^4.2',
             'bezhansalleh/filament-shield:^4.0',
             'stancl/tenancy:dev-master',
+            'spatie/laravel-activitylog:^4.10',
         ];
 
         // 检查哪些包需要在项目 composer.json 中显式声明

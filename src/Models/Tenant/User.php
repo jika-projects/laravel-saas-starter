@@ -6,10 +6,12 @@ use Illuminate\Notifications\Notifiable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
  
 class User extends Authenticatable implements FilamentUser
 {
-    use Notifiable, HasRoles;
+    use Notifiable, HasRoles, LogsActivity;
 
     protected $table = 'users';
  
@@ -32,5 +34,12 @@ class User extends Authenticatable implements FilamentUser
     {
         // 任何有角色的用户都可以访问面板（基于权限控制）
         return $this->roles()->exists();
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnlyDirty()
+            ->logFillable();
     }
 }

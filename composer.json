@@ -13,7 +13,8 @@
     "keywords": ["laravel", "saas", "multi-tenancy", "filament", "tenancy"],
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.0"
+        "laravel/framework": "^12.0",
+        "spatie/laravel-activitylog": "^4.10"
     },
     "autoload": {
         "psr-4": {
