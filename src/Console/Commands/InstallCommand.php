@@ -622,7 +622,7 @@ class InstallCommand extends Command
         }
 
         // 2. 添加 FilamentGeneralSettingsPlugin 到 plugins 配置中
-        if (strpos($content, 'FilamentGeneralSettingsPlugin::make()') === false) {
+        if (!preg_match('/->plugins\(\s*\[.*FilamentGeneralSettingsPlugin::make\(\).*?\]\s*\)/s', $content)) {
             // 在 FilamentShieldPlugin 之后添加
             $pluginConfig = "                FilamentGeneralSettingsPlugin::make()
                     ->setSort(3)
@@ -632,22 +632,16 @@ class InstallCommand extends Command
                     ->canAccess(fn() => auth()->user()?->can('View:GeneralSettingsPage'))
                     ->setNavigationLabel('General Settings'),";
 
-            // 在 FilamentShieldPlugin 之后添加
-            $content = str_replace(
-                "                FilamentShieldPlugin::make()
-                    ->navigationGroup(fn() => __('System')),
-                    ->navigationSort(99)
-            ])",
-                "                FilamentShieldPlugin::make()
-                    ->navigationGroup(fn() => __('System')),
-                    ->navigationSort(99),
-                {$pluginConfig}
-            ])",
-                $content
-            );
-
-            $this->info("Added FilamentGeneralSettingsPlugin to AdminPanelProvider.php");
-            $modified = true;
+            // 查找 FilamentShieldPlugin::make() 并在它之后添加新的插件
+            $pattern = '/(\s*FilamentShieldPlugin::make\(\)[^,]*),(\s*\])/s';
+            if (preg_match($pattern, $content, $matches)) {
+                $replacement = $matches[1] . ',' . "\n" . $pluginConfig . "\n" . $matches[2];
+                $content = preg_replace($pattern, $replacement, $content);
+                $this->info("Added FilamentGeneralSettingsPlugin to AdminPanelProvider.php");
+                $modified = true;
+            } else {
+                $this->warn("Could not find FilamentShieldPlugin::make() in AdminPanelProvider.php plugins array");
+            }
         }
 
         if ($modified) {
