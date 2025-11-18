@@ -41,6 +41,11 @@ class UserResource extends Resource
         ];
     }
 
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-user-group';
+    }
+
     public static function getPages(): array
     {
         return [

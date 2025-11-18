@@ -42,6 +42,11 @@ class TenantResource extends Resource
         ];
     }
 
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-building-office';
+    }
+
     public static function getPages(): array
     {
         return [
