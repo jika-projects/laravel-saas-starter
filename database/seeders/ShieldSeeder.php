@@ -7,6 +7,7 @@ use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use BezhanSalleh\FilamentShield\Support\Utils;
 use Spatie\Permission\PermissionRegistrar;
 use Illuminate\Support\Facades\Artisan;
+use Filament\Facades\Filament;
 
 class ShieldSeeder extends Seeder
 {
@@ -25,8 +26,12 @@ class ShieldSeeder extends Seeder
         try {
             // Generate permissions using FilamentShield facade
             $permissions = $this->generateAllPermissions();
-            
+
             $this->command->info("Generated {$permissions->count()} permissions");
+            $this->command->info("Permissions type: " . gettype($permissions));
+            if ($permissions->count() > 0) {
+                $this->command->info("First permission type: " . get_class($permissions->first()));
+            }
             
             // Create basic roles
             $this->createRoles($permissions);
@@ -54,32 +59,53 @@ class ShieldSeeder extends Seeder
         // Use 'tenant' guard for tenant permissions
         $guardName = 'tenant';
         
-        // Get resources from FilamentShield
-        $resources = FilamentShield::getResources();
-        if ($resources) {
-            foreach ($resources as $resource => $resourceData) {
-                foreach ($resourceData['permissions'] as $permission) {
-                    $permissionRecord = $permissionModel::firstOrCreate([
-                        'name' => $permission['key'],
-                        'guard_name' => $guardName,
-                    ]);
-                    $permissions->push($permissionRecord);
-                }
-            }
-            $this->command->info('Resource permissions created: ' . collect($resources)->count());
+        // Get resources from both central panel and tenant panel
+        $allResources = collect();
+
+        // Get resources from central panel (admin panel)
+        $centralResources = Filament::getResources();
+        $allResources = $allResources->merge($centralResources);
+
+        // Get resources from tenant panel (app panel)
+        $tenantPanel = Filament::getPanel('app');
+        if ($tenantPanel) {
+            $tenantResources = $tenantPanel->getResources();
+            $allResources = $allResources->merge($tenantResources);
         }
-        
-        // Get pages from FilamentShield
-        $pages = FilamentShield::getPages();
-        if ($pages) {
-            foreach ($pages as $page => $pageData) {
+
+        // Remove duplicates
+        $allResources = $allResources->unique();
+
+        foreach ($allResources as $resource) {
+            $resourcePermissions = FilamentShield::getResourcePermissions($resource);
+            foreach ($resourcePermissions as $permission) {
                 $permissionRecord = $permissionModel::firstOrCreate([
-                    'name' => $pageData['permission'],
+                    'name' => $permission,
                     'guard_name' => $guardName,
                 ]);
                 $permissions->push($permissionRecord);
             }
-            $this->command->info('Page permissions created: ' . collect($pages)->count());
+        }
+        $this->command->info('Resource permissions created: ' . count($allResources));
+
+        // Get pages from current tenant panel only
+        if ($tenantPanel) {
+            $panelPages = $tenantPanel->getPages();
+            foreach ($panelPages as $page) {
+                // Skip Dashboard and other system pages
+                if ($page === Filament\Pages\Dashboard::class) {
+                    continue;
+                }
+
+                // Generate page permission using Shield's convention
+                $pagePermission = 'View:' . class_basename($page);
+                $permissionRecord = $permissionModel::firstOrCreate([
+                    'name' => $pagePermission,
+                    'guard_name' => $guardName,
+                ]);
+                $permissions->push($permissionRecord);
+            }
+            $this->command->info('Page permissions created: ' . (count($panelPages) - 1)); // -1 for Dashboard
         }
         
         // Get widgets from FilamentShield
@@ -107,6 +133,8 @@ class ShieldSeeder extends Seeder
         if (count($customPermissions) > 0) {
             $this->command->info('Custom permissions created: ' . count($customPermissions));
         }
+                // Note: FilamentGeneralSettingsPlugin is only used in admin panel, not tenant panel
+        // So we don't need to generate permissions for it in tenant context
         
         return $permissions;
     }

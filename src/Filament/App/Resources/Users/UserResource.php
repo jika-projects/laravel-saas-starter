@@ -47,6 +47,21 @@ class UserResource extends Resource
         return UsersTable::configure($table);
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('System');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Users');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('User');
+    }
+
     public static function getRelations(): array
     {
         return [

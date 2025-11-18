@@ -21,6 +21,11 @@ class ActivityLogResource extends Resource
         return ActivityLogsTable::configure($table);
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('System');
+    }
+
     public static function getRelations(): array
     {
         return [

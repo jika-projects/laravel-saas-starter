@@ -42,6 +42,16 @@ class InstallCommand extends Command
 
         $this->newLine();
 
+        // 1.5. 安装 Filament General Settings
+        $this->info('Installing Filament General Settings...');
+        if (!$this->installFilamentGeneralSettings()) {
+            $this->error('Failed to install Filament General Settings.');
+            $this->error('Installation aborted.');
+            return self::FAILURE;
+        }
+
+        $this->newLine();
+
         // 重新发现包，确保新安装的包可用
         $this->info('Discovering packages...');
         $this->call('package:discover');
@@ -119,6 +129,9 @@ class InstallCommand extends Command
 
         // 更新服务提供者配置
         $this->updateServiceProviders();
+
+        // 更新 AdminPanelProvider 添加 FilamentGeneralSettingsPlugin
+        $this->updateAdminPanelProvider();
 
         // 更新认证配置
         $this->updateAuthConfig();
@@ -452,6 +465,7 @@ class InstallCommand extends Command
             'bezhansalleh/filament-shield:^4.0',
             'stancl/tenancy:dev-master',
             'spatie/laravel-activitylog:^4.10',
+            'joaopaulolndev/filament-general-settings:^2.0',
         ];
 
         // 检查哪些包需要在项目 composer.json 中显式声明
@@ -537,6 +551,104 @@ class InstallCommand extends Command
             ->run(function ($type, $output) {
                 $this->output->write($output);
             }) === 0;
+    }
+
+    /**
+     * 安装 Filament General Settings
+     */
+    protected function installFilamentGeneralSettings(): bool
+    {
+        // 1. 发布 migrations
+        $this->info('  Publishing Filament General Settings migrations...');
+        if (!$this->runArtisanCommand([
+            'vendor:publish',
+            '--tag=filament-general-settings-migrations',
+            '--force'
+        ])) {
+            $this->error('Failed to publish Filament General Settings migrations.');
+            return false;
+        }
+
+        // 2. 运行迁移
+        $this->info('  Running database migrations...');
+        if (!$this->runArtisanCommand(['migrate'])) {
+            $this->error('Failed to run database migrations.');
+            return false;
+        }
+
+        // 3. 发布配置文件
+        $this->info('  Publishing Filament General Settings config...');
+        if (!$this->runArtisanCommand([
+            'vendor:publish',
+            '--tag=filament-general-settings-config',
+            '--force'
+        ])) {
+            $this->error('Failed to publish Filament General Settings config.');
+            return false;
+        }
+
+        $this->info('Filament General Settings installed successfully!');
+        return true;
+    }
+
+    /**
+     * 更新 AdminPanelProvider 添加 FilamentGeneralSettingsPlugin
+     */
+    protected function updateAdminPanelProvider(): void
+    {
+        $adminPanelProviderPath = base_path('app/Providers/Filament/AdminPanelProvider.php');
+
+        if (!File::exists($adminPanelProviderPath)) {
+            $this->warn('AdminPanelProvider.php not found, skipping AdminPanelProvider update...');
+            return;
+        }
+
+        $content = File::get($adminPanelProviderPath);
+        $modified = false;
+
+        // 1. 添加 FilamentGeneralSettingsPlugin 的 use 语句
+        $useStatement = 'use Joaopaulolndev\FilamentGeneralSettings\FilamentGeneralSettingsPlugin;';
+        if (strpos($content, $useStatement) === false) {
+            // 在 use Illuminate\View\Middleware\ShareErrorsFromSession; 后面添加
+            $content = preg_replace(
+                '/(use Illuminate\\\\View\\\\Middleware\\\\ShareErrorsFromSession;)/',
+                '$1' . "\n" . $useStatement,
+                $content
+            );
+
+            $this->info("Added FilamentGeneralSettingsPlugin use statement to AdminPanelProvider.php");
+            $modified = true;
+        }
+
+        // 2. 添加 FilamentGeneralSettingsPlugin 到 plugins 配置中
+        if (!preg_match('/->plugins\(\s*\[.*FilamentGeneralSettingsPlugin::make\(\).*?\]\s*\)/s', $content)) {
+            // 在 FilamentShieldPlugin 之后添加
+            $pluginConfig = "                FilamentGeneralSettingsPlugin::make()
+                    ->setSort(3)
+                    ->setIcon('heroicon-o-cog')
+                    ->setNavigationGroup('System')
+                    ->setTitle('General Settings')
+                    ->canAccess(fn() => auth()->user()?->can('View:GeneralSettingsPage'))
+                    ->setNavigationLabel('General Settings'),";
+
+            // 查找 FilamentShieldPlugin::make() 并在它之后添加新的插件
+            $pattern = '/(\s*FilamentShieldPlugin::make\(\)[^,]*),(\s*\])/s';
+            if (preg_match($pattern, $content, $matches)) {
+                $replacement = $matches[1] . ',' . "\n" . $pluginConfig . "\n" . $matches[2];
+                $content = preg_replace($pattern, $replacement, $content);
+                $this->info("Added FilamentGeneralSettingsPlugin to AdminPanelProvider.php");
+                $modified = true;
+            } else {
+                $this->warn("Could not find FilamentShieldPlugin::make() in AdminPanelProvider.php plugins array");
+            }
+        }
+
+        if ($modified) {
+            File::put($adminPanelProviderPath, $content);
+            $this->info('AdminPanelProvider.php has been updated successfully!');
+        } else {
+            $this->info('AdminPanelProvider.php is already up to date.');
+        }
     }
 
     /**

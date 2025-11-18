@@ -29,12 +29,21 @@ class UserResource extends Resource
     {
         return UsersTable::configure($table);
     }
+    public static function getNavigationGroup(): ?string
+    {
+        return __('System');
+    }
 
     public static function getRelations(): array
     {
         return [
             //
         ];
+    }
+
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-user-group';
     }
 
     public static function getPages(): array

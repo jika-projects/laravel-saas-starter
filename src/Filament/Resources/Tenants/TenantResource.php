@@ -30,11 +30,21 @@ class TenantResource extends Resource
         return TenantsTable::configure($table);
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('Tenants');
+    }
+
     public static function getRelations(): array
     {
         return [
             //
         ];
+    }
+
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-building-office';
     }
 
     public static function getPages(): array

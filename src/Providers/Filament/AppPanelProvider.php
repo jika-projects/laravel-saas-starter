@@ -23,6 +23,7 @@ use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromUnwantedDomains;
 use Stancl\Tenancy\Middleware\ScopeSessions;
 use App\Filament\Resources\ActivityLogs\ActivityLogResource;
+use Joaopaulolndev\FilamentGeneralSettings\FilamentGeneralSettingsPlugin;
 
 class AppPanelProvider extends PanelProvider
 {
@@ -64,7 +65,13 @@ class AppPanelProvider extends PanelProvider
                 ScopeSessions::class,
             ])
             ->plugins([
-                FilamentShieldPlugin::make(),
+                FilamentShieldPlugin::make()
+                ->navigationGroup(fn() => __('System')),
+                FilamentGeneralSettingsPlugin::make()
+                ->setNavigationGroup(fn() => __('System'))
+                ->setIcon('heroicon-o-cog')
+                ->setSort(100)
+                ->canAccess(fn () => auth()->user()?->can('View:GeneralSettingsPage'))
             ])
             ->authMiddleware([
                 Authenticate::class,
