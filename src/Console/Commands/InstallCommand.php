@@ -609,12 +609,11 @@ class InstallCommand extends Command
         // 1. 添加 FilamentGeneralSettingsPlugin 的 use 语句
         $useStatement = 'use Joaopaulolndev\FilamentGeneralSettings\FilamentGeneralSettingsPlugin;';
         if (strpos($content, $useStatement) === false) {
-            // 在最后一个 use 语句后添加
+            // 在 use Illuminate\View\Middleware\ShareErrorsFromSession; 后面添加
             $content = preg_replace(
-                '/(use [^;]+;\s*$)/m',
-                '$1' . $useStatement . "\n",
-                $content,
-                1
+                '/(use Illuminate\\\\View\\\\Middleware\\\\ShareErrorsFromSession;)/',
+                '$1' . "\n" . $useStatement,
+                $content
             );
 
             $this->info("Added FilamentGeneralSettingsPlugin use statement to AdminPanelProvider.php");
