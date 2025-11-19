@@ -52,6 +52,8 @@ php artisan ebrook-saas:install --force
 php artisan migrate
 php artisan shield:generate --all
 php artisan shield:super-admin
+npm install
+npm run build
 ```
 
 ### 5. Done!

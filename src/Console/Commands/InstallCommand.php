@@ -147,6 +147,12 @@ class InstallCommand extends Command
         // 复制 Services 文件
         $this->publishServices($force);
 
+        // 复制 Tenant Controllers 文件
+        $this->publishTenantControllers($force);
+
+        // 复制 Routes 文件
+        $this->publishRoutes($force);
+
         // 复制 Pricing 页面视图
         $this->publishPricingView($force);
 
@@ -286,6 +292,49 @@ class InstallCommand extends Command
             $force,
             'Services'
         );
+    }
+
+    /**
+     * 复制 Tenant Controllers 文件
+     */
+    protected function publishTenantControllers(bool $force = false): void
+    {
+        $this->publishDirectory(
+            __DIR__ . '/../../Http/Controllers/Tenant',
+            base_path('app/Http/Controllers/Tenant'),
+            $force,
+            'Tenant Controllers'
+        );
+    }
+
+    /**
+     * 复制 Routes 文件
+     */
+    protected function publishRoutes(bool $force = false): void
+    {
+        $sourcePath = __DIR__ . '/../../../routes/tenant.php';
+        $targetPath = base_path('routes/tenant.php');
+
+        if (!File::exists($sourcePath)) {
+            $this->warn("Routes file not found at {$sourcePath}");
+            return;
+        }
+
+        if (!$force && File::exists($targetPath)) {
+            $this->info('Routes file already exists, skipping...');
+            return;
+        }
+
+        $content = File::get($sourcePath);
+
+        // 确保目标目录存在
+        $targetDir = dirname($targetPath);
+        if (!File::exists($targetDir)) {
+            File::makeDirectory($targetDir, 0755, true);
+        }
+
+        File::put($targetPath, $content);
+        $this->info('Published routes/tenant.php');
     }
 
     /**
@@ -667,7 +716,19 @@ class InstallCommand extends Command
             $modified = true;
         }
 
-        // 2. 添加 FilamentGeneralSettingsPlugin 到 plugins 配置中
+        // 2. 更新 FilamentShieldPlugin 添加 navigationGroup
+        if (!preg_match('/FilamentShieldPlugin::make\(\)\s*->navigationGroup/', $content)) {
+            // 为 FilamentShieldPlugin 添加 navigationGroup
+            $content = preg_replace(
+                '/(FilamentShieldPlugin::make\(\))/',
+                '$1->navigationGroup(fn() => __(\'System\'))',
+                $content
+            );
+            $this->info("Added navigationGroup to FilamentShieldPlugin in AdminPanelProvider.php");
+            $modified = true;
+        }
+
+        // 3. 添加 FilamentGeneralSettingsPlugin 到 plugins 配置中
         if (!preg_match('/->plugins\(\s*\[.*FilamentGeneralSettingsPlugin::make\(\).*?\]\s*\)/s', $content)) {
             // 在 FilamentShieldPlugin 之后添加
             $pluginConfig = "                FilamentGeneralSettingsPlugin::make()
@@ -678,7 +739,7 @@ class InstallCommand extends Command
                     ->canAccess(fn() => auth()->user()?->can('View:GeneralSettingsPage'))
                     ->setNavigationLabel('General Settings'),";
 
-            // 查找 FilamentShieldPlugin::make() 并在它之后添加新的插件
+            // 查找 FilamentShieldPlugin 及其配置，并在之后添加新的插件
             $pattern = '/(\s*FilamentShieldPlugin::make\(\)[^,]*),(\s*\])/s';
             if (preg_match($pattern, $content, $matches)) {
                 $replacement = $matches[1] . ',' . "\n" . $pluginConfig . "\n" . $matches[2];
