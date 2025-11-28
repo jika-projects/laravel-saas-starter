@@ -183,6 +183,13 @@ class InstallCommand extends Command
         // 更新 TenancyServiceProvider 添加 SeedTenantShield Job
         $this->updateTenancyServiceProvider();
 
+        // 配置 Tailwind CSS
+        $this->info('Setting up Tailwind CSS...');
+        if (!$this->setupTailwindCss()) {
+            $this->warn('Failed to setup Tailwind CSS. You can configure it manually later.');
+        }
+        $this->newLine();
+
         // 清除配置缓存以确保新配置生效
         $this->info('Clearing configuration cache...');
         $this->runArtisanCommand(['config:clear']);
@@ -196,9 +203,10 @@ class InstallCommand extends Command
         $this->comment('All files have been published to your project.');
         $this->newLine();
         $this->info('Next steps:');
-        $this->line('  1. Run: php artisan migrate');
-        $this->line('  2. Run: php artisan shield:generate --all');
-        $this->line('  3. Run: php artisan shield:super-admin');
+        $this->line('  1. Run: npm install');
+        $this->line('  2. Run: php artisan migrate');
+        $this->line('  3. Run: php artisan shield:generate --all');
+        $this->line('  4. Run: php artisan shield:super-admin');
         $this->newLine();
         $this->info('You can now remove the "ebrook/b2b-saas-starter" package from');
         $this->info('your composer.json if desired, as all files have been published.');
@@ -1145,6 +1153,207 @@ return [
         }
 
         $this->newLine();
+        return true;
+    }
+
+    /**
+     * 配置 Tailwind CSS
+     */
+    protected function setupTailwindCss(): bool
+    {
+        try {
+            // 1. 配置 package.json
+            if (!$this->configurePackageJson()) {
+                $this->error('Failed to configure package.json');
+                return false;
+            }
+
+            // 2. 配置 vite.config.js
+            if (!$this->configureViteConfig()) {
+                $this->error('Failed to configure vite.config.js');
+                return false;
+            }
+
+            // 3. 配置 resources/css/app.css
+            if (!$this->configureAppCss()) {
+                $this->error('Failed to configure resources/css/app.css');
+                return false;
+            }
+
+            $this->info('Tailwind CSS configuration completed successfully!');
+            $this->comment('Remember to run: npm install');
+            return true;
+        } catch (\Exception $e) {
+            $this->error('Error setting up Tailwind CSS: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 配置 package.json 添加 Tailwind CSS 依赖
+     */
+    protected function configurePackageJson(): bool
+    {
+        $packageJsonPath = base_path('package.json');
+
+        // 如果 package.json 不存在，创建它
+        if (!File::exists($packageJsonPath)) {
+            $defaultPackageJson = [
+                '$schema' => 'https://www.schemastore.org/package.json',
+                'private' => true,
+                'type' => 'module',
+                'scripts' => [
+                    'build' => 'vite build',
+                    'dev' => 'vite',
+                ],
+                'devDependencies' => [],
+            ];
+            File::put($packageJsonPath, json_encode($defaultPackageJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+            $this->info('Created package.json');
+        }
+
+        // 读取现有的 package.json
+        $content = File::get($packageJsonPath);
+        $packageJson = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->error('Failed to parse package.json: ' . json_last_error_msg());
+            return false;
+        }
+
+        // 确保 devDependencies 存在
+        if (!isset($packageJson['devDependencies'])) {
+            $packageJson['devDependencies'] = [];
+        }
+
+        // 确保 scripts 存在
+        if (!isset($packageJson['scripts'])) {
+            $packageJson['scripts'] = [];
+        }
+
+        $modified = false;
+
+        // 添加 Tailwind CSS 相关依赖
+        $dependencies = [
+            '@tailwindcss/vite' => '^4.0.0',
+            'tailwindcss' => '^4.0.0',
+            'vite' => '^7.0.7',
+            'laravel-vite-plugin' => '^2.0.0',
+        ];
+
+        foreach ($dependencies as $package => $version) {
+            if (!isset($packageJson['devDependencies'][$package])) {
+                $packageJson['devDependencies'][$package] = $version;
+                $this->info("Added {$package} to package.json");
+                $modified = true;
+            } else {
+                $this->info("{$package} already exists in package.json");
+            }
+        }
+
+        // 确保必要的 scripts 存在
+        if (!isset($packageJson['scripts']['dev'])) {
+            $packageJson['scripts']['dev'] = 'vite';
+            $modified = true;
+        }
+        if (!isset($packageJson['scripts']['build'])) {
+            $packageJson['scripts']['build'] = 'vite build';
+            $modified = true;
+        }
+
+        if ($modified) {
+            // 排序 devDependencies（可选，但更整洁）
+            ksort($packageJson['devDependencies']);
+            
+            $jsonContent = json_encode($packageJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            File::put($packageJsonPath, $jsonContent . "\n");
+            $this->info('Updated package.json');
+        }
+
+        return true;
+    }
+
+    /**
+     * 配置 vite.config.js
+     */
+    protected function configureViteConfig(): bool
+    {
+        $viteConfigPath = base_path('vite.config.js');
+
+        // 如果文件已存在，检查是否已配置 Tailwind
+        if (File::exists($viteConfigPath)) {
+            $content = File::get($viteConfigPath);
+            
+            // 检查是否已包含 tailwindcss 插件
+            if (strpos($content, '@tailwindcss/vite') !== false && strpos($content, 'tailwindcss()') !== false) {
+                $this->info('vite.config.js already configured with Tailwind CSS');
+                return true;
+            }
+        }
+
+        // 创建或更新 vite.config.js
+        $viteConfig = <<<'JS'
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: true,
+        }),
+        tailwindcss(),
+    ],
+});
+JS;
+
+        File::put($viteConfigPath, $viteConfig);
+        $this->info('Configured vite.config.js');
+        return true;
+    }
+
+    /**
+     * 配置 resources/css/app.css
+     */
+    protected function configureAppCss(): bool
+    {
+        $cssDir = resource_path('css');
+        $appCssPath = $cssDir . '/app.css';
+
+        // 确保目录存在
+        if (!File::exists($cssDir)) {
+            File::makeDirectory($cssDir, 0755, true);
+        }
+
+        // 如果文件已存在，检查是否已配置 Tailwind
+        if (File::exists($appCssPath)) {
+            $content = File::get($appCssPath);
+            
+            // 检查是否已包含 Tailwind 导入
+            if (strpos($content, '@import \'tailwindcss\';') !== false || strpos($content, '@import "tailwindcss";') !== false) {
+                $this->info('resources/css/app.css already configured with Tailwind CSS');
+                return true;
+            }
+        }
+
+        // 创建或更新 app.css
+        $appCss = <<<'CSS'
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+CSS;
+
+        File::put($appCssPath, $appCss);
+        $this->info('Configured resources/css/app.css');
         return true;
     }
 
