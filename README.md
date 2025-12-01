@@ -29,7 +29,7 @@ cd your-project-name
 ### 2. Install the SaaS Starter Package
 
 ```bash
-composer config repositories.laravel-saas-starter vcs https://github.com/antonydu-cd/laravel-saas-starter
+composer config repositories.laravel-saas-starter vcs https://github.com/jika-projects/laravel-saas-starter
 composer require ebrook/b2b-saas-starter --dev
 ```
 
