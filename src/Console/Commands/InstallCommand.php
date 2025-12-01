@@ -13,7 +13,7 @@ class InstallCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'ebrook-saas:install 
+    protected $signature = 'ebrook-saas:install
                             {--force : Overwrite existing files}
                             {--composer=global : Absolute path to the Composer binary which should be used to install packages}';
 
@@ -207,9 +207,9 @@ class InstallCommand extends Command
     protected function installComponent(string $name, $method): bool
     {
         $this->info("  → Installing {$name}...");
-        
+
         $result = is_callable($method) ? $method() : $this->{$method}();
-        
+
         if (!$result) {
             $this->error("    Failed to install {$name}.");
             return false;
@@ -224,7 +224,7 @@ class InstallCommand extends Command
     protected function publishFiles(): bool
     {
         $this->info('  → Publishing application files...');
-        
+
         $force = $this->option('force');
 
         $publishMethods = [
@@ -298,17 +298,17 @@ class InstallCommand extends Command
         $this->info('║     ✓ Installation Completed Successfully!              ║');
         $this->info('╚══════════════════════════════════════════════════════════╝');
         $this->newLine();
-        
+
         $this->comment('All files have been published to your project.');
         $this->newLine();
-        
+
         $this->info('Next Steps:');
         $this->line('  1. Run: npm install');
         $this->line('  2. Run: php artisan migrate');
         $this->line('  3. Run: php artisan shield:generate --all');
         $this->line('  4. Run: php artisan shield:super-admin');
         $this->newLine();
-        
+
         $this->comment('Optional: You can remove "ebrook/b2b-saas-starter" from composer.json');
         $this->comment('as all files have been published to your project.');
         $this->newLine();
@@ -543,7 +543,7 @@ class InstallCommand extends Command
                 // 使用简单的字符串替换
                 $newLine = "    {$provider},\n";
                 $content = str_replace("];", $newLine . "];", $content);
-                
+
                 $this->info("Added {$provider} to bootstrap/providers.php");
                 $modified = true;
             } else {
@@ -576,7 +576,7 @@ class InstallCommand extends Command
         if (!preg_match("/'tenant'\s*=>/", $content)) {
             // 在 'web' guard 之后添加 'tenant' guard
             $tenantGuard = "\n        'tenant' => [\n            'driver' => 'session',\n            'provider' => 'tenant_users',\n        ],";
-            
+
             // 查找 'web' guard 的结束位置
             $pattern = "/('web'\s*=>\s*\[[^\]]*\],)/s";
             if (preg_match($pattern, $content)) {
@@ -592,7 +592,7 @@ class InstallCommand extends Command
         if (!preg_match("/'tenant_users'\s*=>/", $content)) {
             // 在 'users' provider 之后添加 'tenant_users' provider
             $tenantProvider = "\n\n        'tenant_users' => [\n            'driver' => 'eloquent',\n            'model' => App\\Models\\Tenant\\User::class,\n        ],";
-            
+
             // 查找 'users' provider 的结束位置（在 providers 数组中）
             $pattern = "/('providers'\s*=>\s*\[[^\[]*'users'\s*=>\s*\[[^\]]*\],)/s";
             if (preg_match($pattern, $content)) {
@@ -664,7 +664,7 @@ class InstallCommand extends Command
         if (preg_match($pattern, $content)) {
             $replacement = "$1\n                    \\App\\Jobs\\SeedTenantShield::class,";
             $content = preg_replace($pattern, $replacement, $content);
-            
+
             File::put($providerPath, $content);
             $this->info('Added \\App\\Jobs\\SeedTenantShield::class to TenancyServiceProvider.php JobPipeline');
         } else {
@@ -674,7 +674,7 @@ class InstallCommand extends Command
 
     /**
      * 安装必需的 Composer 依赖包
-     * 
+     *
      * 确保这些依赖在项目的 composer.json 中（而不仅仅是通过 dev 依赖间接引入）
      * 这样用户在移除 ebrook/b2b-saas-starter 包后，项目仍然可以正常运行
      */
@@ -697,10 +697,10 @@ class InstallCommand extends Command
 
         // 检查哪些包需要在项目 composer.json 中显式声明
         $packagesToInstall = [];
-        
+
         foreach ($packages as $package) {
             [$name, $version] = explode(':', $package);
-            
+
             if (!$this->isPackageInstalled($name)) {
                 $packagesToInstall[] = $package;
                 $this->comment("  • {$name} will be added to composer.json");
@@ -727,7 +727,7 @@ class InstallCommand extends Command
 
         // 如果使用了 --force 选项，直接安装，不询问
         $force = $this->option('force');
-        
+
         if (!$force && !$this->confirm('Do you want to add these packages now?', true)) {
             $this->warn('Skipping package installation. You may need to add them manually later.');
             return true;
@@ -746,13 +746,13 @@ class InstallCommand extends Command
     protected function isPackageInstalled(string $package): bool
     {
         $composerJsonPath = base_path('composer.json');
-        
+
         if (!File::exists($composerJsonPath)) {
             return false;
         }
 
         $composerJson = json_decode(File::get($composerJsonPath), true);
-        
+
         return isset($composerJson['require'][$package]) || isset($composerJson['require-dev'][$package]);
     }
 
@@ -1144,6 +1144,13 @@ return [
             // 添加自定义配置
             $customConfig = "
 
+    // 自定义加密字段
+    'encrypted_fields' => [
+        # 'lago_api_key',
+        # 'stripe_secret_key',
+        # 'stripe_publishable_key',
+    ],
+
     // 自定义配置标签页 - API和支付设置
     'custom_tabs' => [
         'api_payment_settings' => [
@@ -1164,6 +1171,7 @@ return [
                     'placeholder' => 'Enter your Lago API key',
                     'required' => false,
                     'rules' => [],
+                    'encrypt' => true,
                 ],
                 'lago_timeout' => [
                     'type' => 'text',
@@ -1178,6 +1186,7 @@ return [
                     'placeholder' => 'sk_test_...',
                     'required' => false,
                     'rules' => [],
+                    'encrypt' => true,
                 ],
                 'stripe_publishable_key' => [
                     'type' => 'text',
@@ -1185,6 +1194,7 @@ return [
                     'placeholder' => 'pk_test_...',
                     'required' => false,
                     'rules' => [],
+                    'encrypt' => true,
                 ],
             ],
         ],
@@ -1228,14 +1238,14 @@ return [
         $this->newLine();
 
         $composerJsonPath = base_path('composer.json');
-        
+
         if (!File::exists($composerJsonPath)) {
             $this->error('composer.json not found.');
             return false;
         }
 
         $composerJson = json_decode(File::get($composerJsonPath), true);
-        
+
         if (json_last_error() !== JSON_ERROR_NONE) {
             $this->error('Failed to parse composer.json: ' . json_last_error_msg());
             return false;
@@ -1266,11 +1276,11 @@ return [
         } else {
             // 添加自定义仓库到 repositories 数组开头
             array_unshift($composerJson['repositories'], $customRepository);
-            
+
             // 保存修改后的 composer.json
             $jsonContent = json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             File::put($composerJsonPath, $jsonContent . "\n");
-            
+
             $this->info('Added custom repository: ' . $customRepository['url']);
         }
 
@@ -1313,7 +1323,7 @@ return [
 
         // 2. 在 boot 方法中注册 Observer
         $observerRegistration = 'GeneralSetting::observe(GeneralSettingObserver::class);';
-        
+
         if (strpos($content, $observerRegistration) === false) {
             // 查找 boot 方法
             $pattern = '/(public function boot\(\): void\s*\{)/';
@@ -1418,10 +1428,10 @@ return [
 
         // 尝试找到 ->withMiddleware(function (Middleware $middleware): void { ... })
         // 并添加 $middleware->append([...]);
-        
+
         // 匹配 withMiddleware 闭包的开始
         $pattern = '/(->withMiddleware\s*\(\s*function\s*\(\s*Middleware\s*\$middleware\s*\)\s*:\s*void\s*\{)/';
-        
+
         if (preg_match($pattern, $content)) {
             // 检查是否已经有 append 调用
             if (strpos($content, '$middleware->append([') !== false) {
@@ -1553,7 +1563,7 @@ return [
         if ($modified) {
             // 排序 devDependencies（可选，但更整洁）
             ksort($packageJson['devDependencies']);
-            
+
             $jsonContent = json_encode($packageJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             File::put($packageJsonPath, $jsonContent . "\n");
             $this->info('Updated package.json');
@@ -1572,7 +1582,7 @@ return [
         // 如果文件已存在，检查是否已配置 Tailwind
         if (File::exists($viteConfigPath)) {
             $content = File::get($viteConfigPath);
-            
+
             // 检查是否已包含 tailwindcss 插件
             if (strpos($content, '@tailwindcss/vite') !== false && strpos($content, 'tailwindcss()') !== false) {
                 $this->info('vite.config.js already configured with Tailwind CSS');
@@ -1618,7 +1628,7 @@ JS;
         // 如果文件已存在，检查是否已配置 Tailwind
         if (File::exists($appCssPath)) {
             $content = File::get($appCssPath);
-            
+
             // 检查是否已包含 Tailwind 导入
             if (strpos($content, '@import \'tailwindcss\';') !== false || strpos($content, '@import "tailwindcss";') !== false) {
                 $this->info('resources/css/app.css already configured with Tailwind CSS');
