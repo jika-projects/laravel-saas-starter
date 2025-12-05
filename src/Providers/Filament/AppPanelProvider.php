@@ -68,12 +68,7 @@ class AppPanelProvider extends PanelProvider
             ])
             ->plugins([
                 FilamentShieldPlugin::make()
-                ->navigationGroup(fn() => __('System')),
-                FilamentGeneralSettingsPlugin::make()
-                ->setNavigationGroup(fn() => __('System'))
-                ->setIcon('heroicon-o-key')
-                ->setSort(100)
-                ->canAccess(fn () => auth()->user()?->can('View:GeneralSettingsPage'))
+                ->navigationGroup(fn() => __('System'))
             ])
             ->authMiddleware([
                 Authenticate::class,
